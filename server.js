@@ -14,8 +14,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
-app.use('/users', userRoutes);
-app.use('/auctions', dealRoutes);
+app.use('/v1/users', userRoutes);
+app.use('/v1/deals', dealRoutes);
 
 // WebSocket
 const server = app.listen(serverPort, () => console.log(`Server started on port ${serverPort}`));
@@ -23,4 +23,23 @@ const wss = new WebSocketServer({ server });
 dealHandler(wss);
 
 // Database Sync
-sequelize.sync({ alter: true }).then(() => console.log('Database synced.'));
+const { exec } = require('child_process');
+
+async function applyMigrations() {
+    return new Promise((resolve, reject) => {
+        exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error applying migrations: ${stderr}`);
+                reject(error);
+            } else {
+                console.log(`Migrations applied: ${stdout}`);
+                resolve(stdout);
+            }
+        });
+    });
+}
+
+applyMigrations()
+    .then(() => console.log("Database migrations deployed."))
+    .catch(console.error);
+

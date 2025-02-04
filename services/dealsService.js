@@ -1,16 +1,13 @@
-const Deal = require('../models/Deal');
 
 const createDeal = async ({ title, description, price }) => {
-  const deal = await Deal.create({
-    title,
-    description,
-    price,
-  });
+  const deal = {
+
+  }
   return deal;
 };
 
 const getAllDeals = async () => {
-  const deals = await Deal.findAll()
+  const deals = []
   if (!deals) {
     throw new Error('Deals not found');
   }
@@ -18,7 +15,7 @@ const getAllDeals = async () => {
 };
 
 const getDeal = async (id) => {
-  const deal = await Deal.findByPk(id);
+  const deal = []
   if (!deal) throw new Error('Deal not found');
   return deal;
 };

@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Assignment {
+  id            Int               @id @default(autoincrement())
+  customerId    Int
+  salespersonId Int
+  dealId        Int?
+  createdAt     DateTime?         @default(now()) @db.Timestamp(0)
+  updatedAt     DateTime?         @db.Timestamp(0)
+  closedAt      DateTime?         @db.Timestamp(0)
+  status        AssignmentStatus
+  Customer      Customer          @relation(fields: [customerId], references: [customerId], onDelete: NoAction, onUpdate: NoAction, map: "Assignment_ibfk_1")
+  User          User              @relation(fields: [salespersonId], references: [employeeNumber], onDelete: NoAction, onUpdate: NoAction, map: "Assignment_ibfk_2")
+  Deal          Deal?             @relation(fields: [dealId], references: [dealId], onDelete: NoAction, onUpdate: NoAction, map: "Assignment_ibfk_3")
+
+  @@index([customerId], map: "customerId")
+  @@index([dealId], map: "dealId")
+  @@index([salespersonId], map: "salespersonId")
+}
+
+model Customer {
+  id            Int                @id @default(autoincrement())
+  customerId    Int                @unique(map: "customerId")
+  name          String             @db.VarChar(100)
+  phone         String             @unique(map: "phone") @db.VarChar(20)
+  email         String             @unique(map: "email") @db.VarChar(100)
+  address       String?            @db.VarChar(100)
+  dealType      CustomerDealType?
+  createdBy     Int
+  Assignment    Assignment[]
+  User          User               @relation(fields: [createdBy], references: [employeeNumber], onDelete: NoAction, onUpdate: NoAction, map: "Customer_ibfk_1")
+  Deal          Deal[]
+
+  @@index([createdBy], map: "createdBy")
+}
+
+model Deal {
+  id                        Int            @id @default(autoincrement())
+  dealId                    Int            @unique(map: "dealId")
+  make                      String         @db.VarChar(100)
+  model                     String         @db.VarChar(100)
+  year                      String         @db.VarChar(100)
+  price                     Decimal        @db.Decimal(10, 2)
+  dealType                  DealType?
+  status                    DealStatus
+  createdBy                 Int
+  purchasedBy               Int?
+  soldBy                    Int?
+  createdAt                 DateTime       @default(now()) @db.Timestamp(0)
+  updatedAt                 DateTime       @db.Timestamp(0)
+  Assignment                Assignment[]
+  User_Deal_createdByToUser User           @relation("Deal_createdByToUser", fields: [createdBy], references: [employeeNumber], onDelete: NoAction, onUpdate: NoAction, map: "Deal_ibfk_1")
+  Customer                  Customer?      @relation(fields: [purchasedBy], references: [customerId], onDelete: NoAction, onUpdate: NoAction, map: "Deal_ibfk_2")
+  User_Deal_soldByToUser    User?          @relation("Deal_soldByToUser", fields: [soldBy], references: [employeeNumber], onDelete: NoAction, onUpdate: NoAction, map: "Deal_ibfk_3")
+
+  @@index([createdBy], map: "createdBy")
+  @@index([purchasedBy], map: "purchasedBy")
+  @@index([soldBy], map: "soldBy")
+}
+
+model Role {
+  id                Int        @id @default(autoincrement())
+  name              Roles
+  hierarchyLevel    Int
+  User              User[]
+}
+
+model User {
+  id                        Int          @id @default(autoincrement())
+  employeeNumber            Int          @unique(map: "employeeNumber")
+  name                      String       @db.VarChar(100)
+  email                     String       @unique(map: "email") @db.VarChar(100)
+  passwordHash              String       @db.VarChar(255)
+  roleId                    Int
+  createdBy                 Int?
+  Assignment                Assignment[]
+  Customer                  Customer[]
+  Deal_Deal_createdByToUser Deal[]       @relation("Deal_createdByToUser")
+  Deal_Deal_soldByToUser    Deal[]       @relation("Deal_soldByToUser")
+  Role                      Role         @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "User_ibfk_1")
+  User                      User?        @relation("UserToUser", fields: [createdBy], references: [employeeNumber], onDelete: NoAction, onUpdate: NoAction, map: "User_ibfk_2")
+  other_User                User[]       @relation("UserToUser")
+
+  @@index([createdBy], map: "createdBy")
+  @@index([roleId], map: "roleId")
+}
+
+enum Roles {
+  Director
+  Manager
+  SalesPerson @map("Sales Person")
+  Receptionist
+}
+
+enum CustomerDealType {
+  ALL
+  NEW
+  USED
+}
+
+enum DealType {
+  NEW
+  USED
+}
+
+enum AssignmentStatus {
+  OPEN
+  SOLD
+  PROSPECT
+  CLOSED
+}
+
+enum DealStatus {
+  ACTIVE
+  INPROGRESS
+  SOLD
+  HOLD
+}
+
+// ; npx prisma migrate dev --name init
+// ; npx prisma generate
+// ; Next steps:
+// ; 1. Set the DATABASE_URL in the .env file to point to your existing database. If your database has no tables yet, read https://pris.ly/d/getting-started
+// ; 2. Set the provider of the datasource block in schema.prisma to match your database: postgresql, mysql, sqlite, sqlserver, mongodb or cockroachdb.
+// ; 3. Run prisma db pull to turn your database schema into a Prisma schema.
+// ; 4. Run prisma generate to generate the Prisma Client. You can then start querying your database.
+// ; 5. Tip: Explore how you can extend the ORM with scalable connection pooling, global caching, and real-time database events. Read: https://pris.ly/cli/beyond-orm
