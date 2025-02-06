@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
+const { generateAuthTokens } = require('../middlewares/auth');
 
 const createUser = async ({ employeeNumber, name, email, password, roleId }) => {
   const passwordHash = bcrypt.hashSync(password, 12);
@@ -9,7 +9,7 @@ const createUser = async ({ employeeNumber, name, email, password, roleId }) => 
       employeeNumber,
       name,
       email,
-      passwordHash: password,
+      passwordHash,
       roleId,
     },
   });
@@ -25,8 +25,12 @@ const loginUser = async ({ email, password }) => {
   if (user) {
     const { passwordHash } = user;
     const isMatch = await bcrypt.compare(password, passwordHash);
-    if (isMatch) return { success: true, message: 'Logged in successfully', data: user };
-    else return { success: false, message: 'Incorrect password' };
+    delete user.passwordHash
+    if (isMatch) {
+      const authTokens = await generateAuthTokens(user);
+
+      return { success: true, message: 'Logged in successfully', data: { user, authTokens }};
+    } else return { success: false, message: 'Incorrect email or password' };
   } else {
     return { success: false, message: 'No account is associated with this email' };
   }
